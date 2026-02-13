@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Elite Case Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+
+body {
+    margin:0;
+    font-family: 'Orbitron', sans-serif;
+    background: linear-gradient(135deg,#0f0f1a,#1a1a2e);
+    color:white;
+    text-align:center;
+}
+
+header {
+    padding:20px;
+    font-size:28px;
+    font-weight:bold;
+}
+
+.balance {
+    font-size:20px;
+    margin-bottom:20px;
+}
+
+.container {
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.case {
+    background:#111827;
+    padding:20px;
+    border-radius:15px;
+    width:200px;
+    transition:0.3s;
+    cursor:pointer;
+}
+
+.case:hover {
+    transform:scale(1.05);
+    background:#1f2937;
+}
+
+button {
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    background:#ff9800;
+    color:black;
+    font-weight:bold;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+.rolling {
+    margin:30px auto;
+    height:80px;
+    overflow:hidden;
+    border:3px solid orange;
+    width:300px;
+    border-radius:10px;
+    position:relative;
+}
+
+.roll-items {
+    position:absolute;
+    display:flex;
+    left:0;
+    transition:2s cubic-bezier(.1,.7,.1,1);
+}
+
+.item {
+    min-width:100px;
+    padding:20px;
+}
+
+.common { color:gray; }
+.rare { color:#2196f3; }
+.epic { color:#9c27b0; }
+.legendary { color:#ffd700; }
+
+.inventory {
+    margin-top:30px;
+}
+
+.battle-box {
+    margin-top:40px;
+    padding:20px;
+    background:#111827;
+    border-radius:15px;
+    width:350px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+</style>
+</head>
+<body>
+
+<header>🔥 Elite Case Simulator</header>
+<div class="balance">Balance: <span id="balance"></span> coins</div>
+
+<div class="container">
+    <div class="case" onclick="openCase('standard')">
+        🎁 Standard Case<br>Cost: 100
+    </div>
+    <div class="case" onclick="openCase('pro')">
+        💎 Pro Case<br>Cost: 250
+    </div>
+    <div class="case" onclick="openCase('elite')">
+        👑 Elite Case<br>Cost: 500
+    </div>
+</div>
+
+<div class="rolling">
+    <div class="roll-items" id="roll"></div>
+</div>
+
+<div class="inventory">
+<h2>📦 Inventory</h2>
+<div id="inventory"></div>
+</div>
+
+<div class="battle-box">
+<h2>⚔ Case Battle (vs Bot)</h2>
+<button onclick="battle()">Start Battle (200 coins)</button>
+<div id="battleResult"></div>
+</div>
+
+<script>
+
+const skins = [
+{ name:"Glock Fade", rarity:"legendary", value:1000 },
+{ name:"AK Redline", rarity:"epic", value:600 },
+{ name:"M4A4 Neo-Noir", rarity:"epic", value:500 },
+{ name:"AWP Asiimov", rarity:"rare", value:300 },
+{ name:"USP-S Guardian", rarity:"rare", value:200 },
+{ name:"P250 Sand Dune", rarity:"common", value:50 },
+{ name:"MP9 Storm", rarity:"common", value:40 }
+];
+
+let balance = localStorage.getItem("balance") 
+    ? parseInt(localStorage.getItem("balance")) 
+    : 1000;
+
+let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+
+updateUI();
+
+function updateUI(){
+    document.getElementById("balance").innerText = balance;
+    document.getElementById("inventory").innerHTML = 
+        inventory.map(i => `<div class="${i.rarity}">${i.name}</div>`).join("");
+}
+
+function save(){
+    localStorage.setItem("balance",balance);
+    localStorage.setItem("inventory",JSON.stringify(inventory));
+}
+
+function getRandomSkin(){
+    let rand = Math.random();
+    if(rand < 0.03) return skins[0];
+    if(rand < 0.10) return skins[1];
+    if(rand < 0.20) return skins[2];
+    if(rand < 0.40) return skins[3];
+    if(rand < 0.65) return skins[4];
+    if(rand < 0.85) return skins[5];
+    return skins[6];
+}
+
+function openCase(type){
+
+    let cost = type==="standard"?100:type==="pro"?250:500;
+    if(balance < cost) return alert("Not enough coins!");
+
+    balance -= cost;
+    save();
+    updateUI();
+
+    let rollDiv = document.getElementById("roll");
+    rollDiv.innerHTML="";
+    rollDiv.style.left="0px";
+
+    let finalSkin = getRandomSkin();
+
+    let items=[];
+    for(let i=0;i<30;i++){
+        let skin = skins[Math.floor(Math.random()*skins.length)];
+        items.push(`<div class="item ${skin.rarity}">${skin.name}</div>`);
+    }
+
+    items[25] = `<div class="item ${finalSkin.rarity}">${finalSkin.name}</div>`;
+    rollDiv.innerHTML = items.join("");
+
+    setTimeout(()=>{
+        rollDiv.style.left="-2500px";
+    },100);
+
+    setTimeout(()=>{
+        inventory.push(finalSkin);
+        save();
+        updateUI();
+        alert("You won: "+finalSkin.name);
+    },2200);
+}
+
+function battle(){
+
+    if(balance < 200) return alert("Not enough coins!");
+
+    balance -= 200;
+
+    let player = getRandomSkin();
+    let bot = getRandomSkin();
+
+    let result;
+
+    if(player.value > bot.value){
+        balance += 400;
+        result="🏆 You WIN!";
+    } else if(player.value < bot.value){
+        result="❌ Bot Wins!";
+    } else {
+        balance += 200;
+        result="🤝 Draw!";
+    }
+
+    document.getElementById("battleResult").innerHTML =
+        `You: <span class="${player.rarity}">${player.name}</span><br>
+         Bot: <span class="${bot.rarity}">${bot.name}</span><br><br>${result}`;
+
+    save();
+    updateUI();
+}
+
+</script>
+
+</body>
+</html>
